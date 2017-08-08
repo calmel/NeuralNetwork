@@ -1,0 +1,98 @@
+<html>
+<head>
+	<!--<script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.8/p5.js"></script>-->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/synaptic/1.0.12/synaptic.js"></script>
+	<script src="./papaparse.min.js"></script>
+	<script src="./jquery-3.2.1.min.js"></script>
+	<script>
+		var data;
+		var Neuron = synaptic.Neuron,
+		Layer = synaptic.Layer,
+		Network = synaptic.Network,
+		Trainer = synaptic.Trainer,
+		Architect = synaptic.Architect;
+		//AI init
+		var myPerceptron = new Architect.LTSM(3,30,30,30,30,30,30,30,30,30,30,1);
+		var trainer = new Trainer(myPerceptron);
+		var maxTime, maxClose, maxOpen, maxVolume;
+		function handleFileSelect(evt) {
+			// ...
+			//debugger;
+			var file = evt.target.files[0];
+ 
+			Papa.parse(file, {
+				header: true,
+				dynamicTyping: true,
+				complete: function(results) {
+					data = results;
+					//document.getElementById("outputObject").innerHTML = JSON.stringify(data);
+					//var something = window.open("data:text/json," + encodeURIComponent(data));
+					//something.focus();
+					var trainingSet = [];
+					var volume = [];
+					var open = [];
+					var time = [];
+					var close = [];
+					data = data.data;
+					for(var i=0, length = data.length-1; i<length; i++) {
+						volume.push(data[i].Volume);
+						open.push(data[i].Open);
+						time.push(new Date(data[i].Date).getTime());
+						close.push(data[i].Close);
+					}
+					maxVolume = volume.reduce(function(a, b) {
+										return Math.max(a, b);
+									});
+					maxOpen = volume.reduce(function(a, b) {
+										return Math.max(a, b);
+									});
+					var date = new Date();
+					date.setDate(date.getDate() + 7)
+					maxClose = close.reduce(function(a, b) {
+										return Math.max(a, b);
+									});
+					maxTime = date.getTime();
+					maxTime = Number.MAX_SAFE_INTEGER;
+					
+					//training output would be the close price of the day
+
+					for(var i=1, length = data.length-1; i<length; i++){
+						trainingSet.push(
+							{
+								input: [time[i]/maxTime, open[i]/200, volume[i-1]/maxVolume],//volume of previous day
+								output: [close[i]/200]   //tomorrow's closing price
+							}
+						);
+					}
+					console.log(trainingSet);
+					var options = {
+						rate: .1,
+						iterations: 20000,
+						shuffle: false,
+						log: 1000//,
+						//cost: Trainer.cost.CROSS_ENTROPY
+					}
+					//train it
+					trainer.trainAsync(trainingSet, options)
+					.then(results => console.log('done!', results));
+				}
+			});
+		}
+		
+		//myPerceptron.activate([(new Date().getTime()), ]); 
+		$(document).ready(function(){
+			$("#csv-file").change(handleFileSelect);
+			//$("#date").change(handleDateChange);
+		});
+		
+	</script>
+</head>
+
+<body>
+	<input type="file" id="csv-file" name="files"/>
+	
+	<br>Date:<br>
+	<input type="date" id="date"><br>
+	  <div id="outputObject" />
+</body>
+</html>
